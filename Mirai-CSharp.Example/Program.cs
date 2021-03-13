@@ -16,11 +16,11 @@ namespace Mirai_CSharp.Example
             await using MiraiHttpSession session = new MiraiHttpSession();
             // 把你实现了 Mirai_CSharp.Plugin.Interfaces 下的接口的类给 new 出来, 然后作为插件塞给 session
             ExamplePlugin plugin = new ExamplePlugin();
-            // 你也可以一个个绑定事件。比如 session.GroupMessageEvt += plugin.GroupMessage;
+            // 你也可以一个个绑定事件。比如  session.GroupMessageEvt += plugin.GroupMessage;
             // 手动绑定事件后不要再调用AddPlugin, 否则可能导致重复调用
             session.AddPlugin(plugin);
             // 使用上边提供的信息异步连接到 mirai-api-http
-            await session.ConnectAsync(options, 284247028); // 自己填机器人QQ号
+            await session.ConnectAsync(options, 1493513606); // 自己填机器人QQ号
             while (true)
             {
                 if (await Console.In.ReadLineAsync() == "exit")

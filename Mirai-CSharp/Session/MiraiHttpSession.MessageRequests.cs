@@ -64,22 +64,15 @@ namespace Mirai_CSharp
                 quote = quoteMsgId,
                 messageChain = chain
             };
-#if DEBUG
-            var msg = string.Join(",", chain.Where(r => r.GetType() == typeof(PlainMessage)).Select(r => ((PlainMessage)r).Message));
-            Console.WriteLine($"qq:{qqNumber},group:{groupNumber},msg:{msg}");
-            return 1;
-#else
             using JsonDocument j = await session.Client.PostAsJsonAsync($"{session.Options.BaseUrl}/{action}", payload, _forSendMsg).GetJsonAsync(token: session.Token);
             JsonElement root = j.RootElement;
-            int code = root.GetProperty("code").GetInt32();
-            if (code == 0)
+            if (root.CheckApiRespCode(out int? code))
             {
                 return root.GetProperty("messageId").GetInt32();
             }
-            throw GetCommonException(code, in root);
-#endif
+            throw GetCommonException(code!.Value, in root);
         }
-
+        
         /// <summary>
         /// 异步发送好友消息
         /// </summary>

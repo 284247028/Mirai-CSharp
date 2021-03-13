@@ -38,7 +38,7 @@ namespace Mirai_CSharp
         {
             CheckDisposed();
             InternalSessionInfo session = new InternalSessionInfo();
-            if (Interlocked.CompareExchange(ref SessionInfo, session, null!) == null)
+            if (Interlocked.CompareExchange(ref SessionInfo, session, null) == null)
             {
                 try
                 {
@@ -66,7 +66,7 @@ namespace Mirai_CSharp
                 }
                 catch
                 {
-                    Interlocked.CompareExchange(ref SessionInfo, null, session);
+                    Interlocked.CompareExchange(ref SessionInfo, (InternalSessionInfo?)null, session); // 奇妙的Rosyln
                     _ = InternalReleaseAsync(session);
                     throw;
                 }
@@ -105,18 +105,17 @@ namespace Mirai_CSharp
         {
             using JsonDocument j = await client.GetAsync($"{options.BaseUrl}/about").GetJsonAsync();
             JsonElement root = j.RootElement;
-            int code = root.GetProperty("code").GetInt32();
-            if (code == 0)
+            if (root.CheckApiRespCode(out int? code))
             {
                 string version = root.GetProperty("data").GetProperty("version").GetString()!;
                 int vIndex = version.IndexOf('v');
 #if NETSTANDARD2_0
-                return Version.Parse(vIndex > 0 ? version.Substring(vIndex) : version); // v1.0.0 ~ v1.7.2, skip 'v'
+                return Version.Parse(vIndex != -1 ? version.Substring(vIndex) : version); // v1.0.0 ~ v1.7.4, skip 'v'
 #else
-                return Version.Parse(vIndex > 0 ? version[vIndex..] : version); // v1.0.0 ~ v1.7.2, skip 'v'
+                return Version.Parse(vIndex != -1 ? version[(vIndex + 1)..] : version); // v1.0.0 ~ v1.7.4, skip 'v'
 #endif
             }
-            throw GetCommonException(code, in root);
+            throw GetCommonException(code!.Value, in root);
         }
 
         /// <inheritdoc cref="GetVersionAsync(HttpClient, MiraiHttpSessionOptions)"/>
@@ -148,7 +147,7 @@ namespace Mirai_CSharp
             return InternalReleaseAsync(session, token);
         }
 
-        private async Task InternalReleaseAsync(InternalSessionInfo session, CancellationToken token = default)
+        private static async Task InternalReleaseAsync(InternalSessionInfo session, CancellationToken token = default)
         {
             session.Connected = false;
             session.Canceller?.Cancel();
@@ -160,7 +159,10 @@ namespace Mirai_CSharp
             };
             try
             {
-                await session.Client.PostAsJsonAsync($"{session.Options.BaseUrl}/release", payload, token).AsApiRespAsync(token);
+                if (session.Options != null)
+                {
+                    await session.Client.PostAsJsonAsync($"{session.Options.BaseUrl}/release", payload, token).AsApiRespAsync(token);
+                }
             }
             finally
             {
